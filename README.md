@@ -16,6 +16,7 @@ trojan多用户管理部署程序
 - 集成acme.sh证书申请
 - 生成客户端配置文件
 - 在线实时查看trojan日志
+- 在线trojan和trojan-go随时切换
 - 支持trojan://分享链接和二维码分享(二维码仅限web页面)
 
 ## 安装方式
@@ -67,6 +68,7 @@ Usage:
 
 Available Commands:
   add         添加用户
+  clean       清空指定用户流量
   completion  自动命令补全(支持bash和zsh)
   del         删除用户
   help        Help about any command
@@ -78,6 +80,7 @@ Available Commands:
   stop        停止trojan
   tls         证书安装
   update      更新trojan
+  updateWeb   更新trojan管理程序
   version     显示版本号
   web         以web方式启动
 

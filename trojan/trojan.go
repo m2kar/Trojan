@@ -8,13 +8,21 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"trojan/core"
 	"trojan/util"
 )
 
 // ControllMenu Trojan控制菜单
 func ControllMenu() {
 	fmt.Println()
+	tType := Type()
+	if tType == "trojan" {
+		tType = "trojan-go"
+	} else {
+		tType = "trojan"
+	}
 	menu := []string{"启动trojan", "停止trojan", "重启trojan", "查看trojan状态", "查看trojan日志"}
+	menu = append(menu, "切换为"+tType)
 	switch util.LoopInput("请选择: ", menu, true) {
 	case 1:
 		Start()
@@ -30,6 +38,9 @@ func ControllMenu() {
 		signal.Notify(c, os.Interrupt, os.Kill)
 		//阻塞
 		<-c
+	case 6:
+		_ = core.SetValue("trojanType", tType)
+		InstallTrojan()
 	}
 }
 
@@ -81,13 +92,31 @@ func RunTime() string {
 
 // Version Trojan版本
 func Version() string {
-	result := strings.TrimSpace(util.ExecCommandWithResult("/usr/bin/trojan/trojan -v"))
+	flag := "-v"
+	if Type() == "trojan-go" {
+		flag = "-version"
+	}
+	result := strings.TrimSpace(util.ExecCommandWithResult("/usr/bin/trojan/trojan " + flag))
 	if len(result) == 0 {
 		return ""
 	}
 	firstLine := strings.Split(result, "\n")[0]
 	tempSlice := strings.Split(firstLine, " ")
 	return tempSlice[len(tempSlice)-1]
+}
+
+// Type Trojan类型
+func Type() string {
+	tType, _ := core.GetValue("trojanType")
+	if tType == "" {
+		if strings.Contains(Status(false), "trojan-go") {
+			tType = "trojan-go"
+		} else {
+			tType = "trojan"
+		}
+		_ = core.SetValue("trojanType", tType)
+	}
+	return tType
 }
 
 // Log 实时打印trojan日志
@@ -122,4 +151,24 @@ func LogChan(param string, closeChan chan byte) (chan string, error) {
 		}
 	}()
 	return ch, nil
+}
+
+// SetDomain 设置显示的域名
+func SetDomain(domain string) {
+	if domain == "" {
+		domain = util.Input("请输入要显示的域名地址: ", "")
+	}
+	if domain == "" {
+		fmt.Println("撤销更改!")
+	} else {
+		core.WriteDomain(domain)
+		Restart()
+		fmt.Println("修改domain成功!")
+	}
+}
+
+// GetDomainAndPort 获取域名和端口
+func GetDomainAndPort() (string, int) {
+	config := core.Load("")
+	return config.SSl.Sni, config.LocalPort
 }

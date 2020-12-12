@@ -17,9 +17,8 @@ type ClientConfig struct {
 // ClientSSL 结构体
 type ClientSSL struct {
 	SSL
-	Verify         bool   `json:"verify"`
-	VerifyHostname bool   `json:"verify_hostname"`
-	Sni            string `json:"sni"`
+	Verify         bool `json:"verify"`
+	VerifyHostname bool `json:"verify_hostname"`
 }
 
 // ClientTCP 结构体
@@ -28,7 +27,7 @@ type ClientTCP struct {
 }
 
 // WriteClient 生成客户端json
-func WriteClient(password string, domain string, writePath string) bool {
+func WriteClient(port int, password, domain, writePath string) bool {
 	box := packr.New("client.json", "../asset")
 	data, err := box.Find("client.json")
 	if err != nil {
@@ -41,6 +40,7 @@ func WriteClient(password string, domain string, writePath string) bool {
 		return false
 	}
 	config.RemoteAddr = domain
+	config.RemotePort = port
 	config.Password = []string{password}
 	outData, err := json.MarshalIndent(config, "", "    ")
 	if err != nil {

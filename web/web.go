@@ -5,6 +5,7 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/gobuffalo/packr/v2"
+	"github.com/robfig/cron/v3"
 	"net/http"
 	"strconv"
 	"trojan/core"
@@ -42,6 +43,18 @@ func userRouter(router *gin.Engine) {
 			id, _ := strconv.Atoi(sid)
 			c.JSON(200, controller.UpdateUser(uint(id), username, password))
 		})
+		user.POST("/expire", func(c *gin.Context) {
+			sid := c.PostForm("id")
+			sDays := c.PostForm("useDays")
+			id, _ := strconv.Atoi(sid)
+			useDays, _ := strconv.Atoi(sDays)
+			c.JSON(200, controller.SetExpire(uint(id), uint(useDays)))
+		})
+		user.DELETE("/expire", func(c *gin.Context) {
+			sid := c.PostForm("id")
+			id, _ := strconv.Atoi(sid)
+			c.JSON(200, controller.CancelExpire(uint(id)))
+		})
 		user.DELETE("", func(c *gin.Context) {
 			stringId := c.Query("id")
 			id, _ := strconv.Atoi(stringId)
@@ -66,10 +79,17 @@ func trojanRouter(router *gin.Engine) {
 	router.POST("/trojan/update", func(c *gin.Context) {
 		c.JSON(200, controller.Update())
 	})
+	router.POST("/trojan/switch", func(c *gin.Context) {
+		tType := c.DefaultPostForm("type", "trojan")
+		c.JSON(200, controller.SetTrojanType(tType))
+	})
 	router.POST("/trojan/loglevel", func(c *gin.Context) {
 		slevel := c.DefaultPostForm("level", "1")
 		level, _ := strconv.Atoi(slevel)
 		c.JSON(200, controller.SetLogLevel(level))
+	})
+	router.POST("/trojan/domain", func(c *gin.Context) {
+		c.JSON(200, controller.SetDomain(c.PostForm("domain")))
 	})
 	router.GET("/trojan/log", func(c *gin.Context) {
 		controller.Log(c)
@@ -120,8 +140,21 @@ func staticRouter(router *gin.Engine) {
 	})
 }
 
+func sheduleTask() {
+	c := cron.New()
+	c.AddFunc("CRON_TZ=Asia/Shanghai @monthly", func() {
+		mysql := core.GetMysql()
+		mysql.MonthlyResetData()
+	})
+	c.AddFunc("CRON_TZ=Asia/Shanghai @daily", func() {
+		mysql := core.GetMysql()
+		mysql.DailyCheckExpire()
+	})
+	c.Start()
+}
+
 // Start web启动入口
-func Start(port int, isSSL bool) {
+func Start(host string, port int, isSSL bool) {
 	router := gin.Default()
 	router.Use(gzip.Gzip(gzip.DefaultCompression))
 	staticRouter(router)
@@ -130,12 +163,13 @@ func Start(port int, isSSL bool) {
 	userRouter(router)
 	dataRouter(router)
 	commonRouter(router)
+	sheduleTask()
 	util.OpenPort(port)
 	if isSSL {
 		config := core.Load("")
 		ssl := &config.SSl
-		router.RunTLS(fmt.Sprintf(":%d", port), ssl.Cert, ssl.Key)
+		router.RunTLS(fmt.Sprintf("%s:%d", host, port), ssl.Cert, ssl.Key)
 	} else {
-		router.Run(fmt.Sprintf(":%d", port))
+		router.Run(fmt.Sprintf("%s:%d", host, port))
 	}
 }

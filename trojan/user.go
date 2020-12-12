@@ -101,18 +101,25 @@ func CleanData() {
 	}
 }
 
+// CleanDataByName 清空指定用户流量
+func CleanDataByName(usernames []string) {
+	mysql := core.GetMysql()
+	if err := mysql.CleanDataByName(usernames); err != nil {
+		fmt.Println(err.Error())
+	} else {
+		fmt.Println("清空流量成功!")
+	}
+}
+
 // UserList 获取用户列表并打印显示
 func UserList(ids ...string) []*core.User {
 	mysql := core.GetMysql()
-	userList := mysql.GetData(ids...)
-	if userList == nil {
-		fmt.Println("连接mysql失败!")
+	userList, err := mysql.GetData(ids...)
+	if err != nil {
+		fmt.Println(err.Error())
 		return nil
 	}
-	domain, err := core.GetValue("domain")
-	if err != nil {
-		domain = ""
-	}
+	domain, port := GetDomainAndPort()
 	for i, k := range userList {
 		pass, err := base64.StdEncoding.DecodeString(k.Password)
 		if err != nil {
@@ -128,7 +135,7 @@ func UserList(ids ...string) []*core.User {
 		} else {
 			fmt.Println("流量限额: " + util.Cyan(util.Bytefmt(uint64(k.Quota))))
 		}
-		fmt.Println("分享链接: " + util.Green(fmt.Sprintf("trojan://%s@%s:443", string(pass), domain)))
+		fmt.Println("分享链接: " + util.Green(fmt.Sprintf("trojan://%s@%s:%d", string(pass), domain, port)))
 		fmt.Println()
 	}
 	return userList

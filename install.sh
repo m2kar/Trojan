@@ -103,7 +103,7 @@ checkSys() {
     fi
 
     # 缺失/usr/local/bin路径时自动添加
-    [[ -z `echo $PATH|grep /usr/local/bin` ]] && { echo 'export PATH=$PATH:/usr/local/bin' >> /etc/profile; source /etc/profile; }
+    [[ -z `echo $PATH|grep /usr/local/bin` ]] && { echo 'export PATH=$PATH:/usr/local/bin' >> /etc/bashrc; source /etc/bashrc; }
 }
 
 #安装依赖
@@ -167,7 +167,10 @@ installTrojan(){
             sed -i "s/\"db\"/\"database\"/g" /usr/local/etc/trojan/config.json
             systemctl restart trojan
         fi
-        /usr/local/bin/trojan upgrade
+        /usr/local/bin/trojan upgrade db
+        if [[ -z `cat /usr/local/etc/trojan/config.json|grep sni` ]];then
+            /usr/local/bin/trojan upgrade config
+        fi
         systemctl restart trojan-web
         colorEcho $GREEN "更新trojan管理程序成功!\n"
     fi
